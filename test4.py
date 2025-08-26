@@ -105,7 +105,8 @@ def create_robust_driver(headless: bool = False):
         options.add_argument("--headless=new")  # 無頭模式
     else:
         # 有視窗 → 不要加 headless
-        options.add_argument("--start-maximized")
+        # options.add_argument("--start-maximized")
+        options.add_argument("--headless=new")   # Headless 模式 (新版 Chrome)
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -147,6 +148,7 @@ def create_robust_driver(headless: bool = False):
     options.add_argument("--single-process")
     options.add_argument("--no-zygote")
 
+    options.binary_location = "/usr/bin/chromium"
     # 阻擋特定內容類型
     prefs = {
         "profile.default_content_setting_values": {
@@ -166,7 +168,10 @@ def create_robust_driver(headless: bool = False):
     options.add_experimental_option("prefs", prefs)
 
     try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver = webdriver.Chrome(
+            service=Service("/usr/bin/chromedriver"),
+            options=options
+        )
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
     except Exception as e:
