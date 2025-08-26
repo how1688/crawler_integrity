@@ -300,7 +300,7 @@ def get_article_links_from_story(story_info):
         
         for j, article in enumerate(article_elements, start=1):
             try:
-                if processed_count >= 20 :
+                if processed_count >= 10 :
                     break
                 
                 h4_element = article.find("h4", class_="ipQwMb ekueJc RD0gLb")
@@ -1080,7 +1080,7 @@ def process_news_pipeline(main_url, category):
     
     # 步驟2: 處理每個故事，獲取所有文章連結
     all_article_links = []
-    for story_info in story_links[:15]:
+    for story_info in story_links[:10]:
         article_links = get_article_links_from_story(story_info)
         all_article_links.extend(article_links)
     
@@ -1247,7 +1247,8 @@ def main():
     
     # 可以選擇處理特定分類或全部分類
     # selected_categories = ["Science & Technology"]#, "Business & Finance", "Health & Wellness", "Sports", "Entertainment", "Lifestyle & Consumer", ]#"Taiwan News", "International News", "Politics"]# 可以修改這裡來選擇要處理的分類
-    selected_categories = list(news_categories.keys())  # 處理所有分類
+    selected_categories = ["Politics"]
+    # selected_categories = list(news_categories.keys())  # 處理所有分類
     
     all_final_stories = []
     start_time = time.time()
