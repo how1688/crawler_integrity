@@ -30,6 +30,10 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 
 load_dotenv()
+
+chrome_bin = os.environ.get("CHROME_BIN")
+driver_bin = os.environ.get("CHROMEDRIVER_BIN")
+
 # Supabase 配置
 SUPABASE_URL = os.getenv("SUPABASE_URL")  # 替換為你的 Supabase URL
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # 替換為你的 Supabase API Key
@@ -150,7 +154,7 @@ def create_robust_driver(headless: bool = False):
     options.add_argument("--single-process")
     options.add_argument("--no-zygote")
 
-    options.binary_location = "/usr/bin/chromium"
+    options.binary_location = chrome_bin   # 告訴 Selenium 去用 Chromium
     # 阻擋特定內容類型
     prefs = {
         "profile.default_content_setting_values": {
@@ -170,10 +174,7 @@ def create_robust_driver(headless: bool = False):
     options.add_experimental_option("prefs", prefs)
 
     try:
-        driver = webdriver.Chrome(
-            service=Service("/usr/bin/chromedriver"),
-            options=options
-        )
+        driver = webdriver.Chrome(executable_path=driver_bin, options=options)
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
     except Exception as e:

@@ -5,8 +5,8 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-scripts = ["test4_politic.py", 
-        #    "/code/畢專test/New_Summary/scripts/quick_run.py",
+scripts = [#"test4_politic.py", 
+           "/code/畢專test/New_Summary/scripts/quick_run.py",
         #    "/code/畢專test/demo/data_to_supabase/generate_categories_from_single_news.py",
         #    "/code/畢專test/demo/data_to_supabase/generate_picture_to_supabase/generate_from_supabase.py",
         #    "Relative_News.py"
