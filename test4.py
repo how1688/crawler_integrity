@@ -24,7 +24,7 @@ from dateutil import parser
 from google import genai
 from google.genai import types
 import shutil
-
+import logging
 # Supabase imports
 from supabase import create_client, Client
 
@@ -46,10 +46,10 @@ except Exception as e:
 
 def clean_data(data):
     for i, article in enumerate(data):
-            print(f"➡️ 正在處理第 {i+1} 篇文章...")
+            logging.info(f"➡️ 正在處理第 {i+1} 篇文章...")
             if "articles" in article:
                 for j, sub_article in enumerate(article["articles"]):
-                    print(f"   ➡️ 正在處理第 {j+1} 篇子文章...")
+                    logging.info(f"   ➡️ 正在處理第 {j+1} 篇子文章...")
 
                     # (1) 去除 HTML
                     raw_content = sub_article.get("content", "")
@@ -84,15 +84,15 @@ def clean_data(data):
                         except Exception as e:
                             if "503 UNAVAILABLE" in str(e):
                                 retries += 1
-                                print(f"⚠️ 偵測到模型過載，正在嘗試第 {retries} 次重試...")
+                                logging.info(f"⚠️ 偵測到模型過載，正在嘗試第 {retries} 次重試...")
                                 time.sleep(3 * retries) # 每次重試等待更久
                             else:
-                                print(f"❌ 發生錯誤於文章：{filename}，錯誤訊息：{e}")
+                                logging.info(f"❌ 發生錯誤於文章：{filename}，錯誤訊息：{e}")
                                 sub_article["content"] = "[清洗失敗]"
                                 break # 其他錯誤直接跳出
                     
                     if not success:
-                        print(f"❌ 嘗試 {max_retries} 次後仍無法成功處理文章：{filename}")
+                        logging.info(f"❌ 嘗試 {max_retries} 次後仍無法成功處理文章：{filename}")
                         sub_article["content"] = "[清洗失敗]"
 
     return data
@@ -175,7 +175,7 @@ def create_robust_driver(headless: bool = False):
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
     except Exception as e:
-        print(f"❌ 創建 WebDriver 失敗: {e}")
+        logging.info(f"❌ 創建 WebDriver 失敗: {e}")
         raise
 
 def get_main_story_links(main_url, category):
@@ -185,7 +185,7 @@ def get_main_story_links(main_url, category):
     
     try:
         driver = create_robust_driver(headless=True)
-        print(f"🔍 正在抓取 {category} 領域的主要故事連結...")
+        logging.info(f"🔍 正在抓取 {category} 領域的主要故事連結...")
         driver.get(main_url)
         
         wait = WebDriverWait(driver, 15)
@@ -194,7 +194,7 @@ def get_main_story_links(main_url, category):
         soup = BeautifulSoup(driver.page_source, "html.parser")
         c_wiz_blocks = soup.find_all("c-wiz", {"jsrenderer": "jeGyVb"})
         
-        print(f"✅ 找到 {len(c_wiz_blocks)} 個 c-wiz 區塊")
+        logging.info(f"✅ 找到 {len(c_wiz_blocks)} 個 c-wiz 區塊")
         
         for i, block in enumerate(c_wiz_blocks, start=1):
             try:
@@ -215,8 +215,8 @@ def get_main_story_links(main_url, category):
                             full_link, category, "", ""
                         )
                         
-                        print(f"   處理故事 {i}: {href}")
-                        print(f"   📋 檢查結果: {skip_reason}")
+                        logging.info(f"   處理故事 {i}: {href}")
+                        logging.info(f"   📋 檢查結果: {skip_reason}")
                         
                         # 根據action_type決定story_id
                         if action_type == "add_to_existing_story" and story_data:
@@ -234,23 +234,23 @@ def get_main_story_links(main_url, category):
                             "existing_story_data": story_data
                         })
                         
-                        print(f"{i}. 📰 [{category}] {title}")
-                        print(f"   🆔 故事ID: {story_id}")
-                        print(f"   🔗 {full_link}")
-                        print(f"   🎯 處理類型: {action_type}")
+                        logging.info(f"{i}. 📰 [{category}] {title}")
+                        logging.info(f"   🆔 故事ID: {story_id}")
+                        logging.info(f"   🔗 {full_link}")
+                        logging.info(f"   🎯 處理類型: {action_type}")
                         
             except Exception as e:
-                print(f"❌ 處理故事區塊 {i} 時出錯: {e}")
+                logging.info(f"❌ 處理故事區塊 {i} 時出錯: {e}")
                 continue
         
-        print(f"\n📊 總共收集到 {len(story_links)} 個 {category} 領域需要處理的主要故事連結")
+        logging.info(f"\n📊 總共收集到 {len(story_links)} 個 {category} 領域需要處理的主要故事連結")
         
     except TimeoutException:
-        print(f"❌ 頁面載入超時: {main_url}")
+        logging.info(f"❌ 頁面載入超時: {main_url}")
     except WebDriverException as e:
-        print(f"❌ WebDriver 錯誤: {e}")
+        logging.info(f"❌ WebDriver 錯誤: {e}")
     except Exception as e:
-        print(f"❌ 抓取主要故事連結時出錯: {e}")
+        logging.info(f"❌ 抓取主要故事連結時出錯: {e}")
     finally:
         if driver:
             try:
@@ -270,8 +270,8 @@ def get_article_links_from_story(story_info):
     
     try:
         driver = create_robust_driver(headless=True)
-        print(f"\n🔍 正在處理故事 {story_info['index']}: [{story_info['category']}] {story_info['title']}")
-        print(f"   🆔 故事ID: {story_info['story_id']}")
+        logging.info(f"\n🔍 正在處理故事 {story_info['index']}: [{story_info['category']}] {story_info['title']}")
+        logging.info(f"   🆔 故事ID: {story_info['story_id']}")
         
         # 取得現有故事的 crawl_date (如果有的話)
         existing_story_data = story_info.get('existing_story_data')
@@ -284,9 +284,9 @@ def get_article_links_from_story(story_info):
                         cutoff_date = parser.parse(cutoff_date_str)
                     except:
                         cutoff_date = datetime.strptime(cutoff_date_str, "%Y/%m/%d %H:%M")
-                print(f"   📅 只處理 {cutoff_date_str} 之後的文章")
+                logging.info(f"   📅 只處理 {cutoff_date_str} 之後的文章")
             except Exception as e:
-                print(f"   ⚠️ 解析 cutoff_date 時出錯: {e}")
+                logging.info(f"   ⚠️ 解析 cutoff_date 時出錯: {e}")
         
         driver.get(story_info['url'])
         time.sleep(random.randint(3, 6))
@@ -294,7 +294,7 @@ def get_article_links_from_story(story_info):
         soup = BeautifulSoup(driver.page_source, "html.parser")
         article_elements = soup.find_all("article", class_="MQsxIb xTewfe tXImLc R7GTQ keNKEd keNKEd VkAdve GU7x0c JMJvke q4atFc")
         
-        print(f"   ✅ 找到 {len(article_elements)} 個 article 元素")
+        logging.info(f"   ✅ 找到 {len(article_elements)} 個 article 元素")
         
         processed_count = 0
         
@@ -336,8 +336,8 @@ def get_article_links_from_story(story_info):
                             
                             # **重要：檢查文章時間是否在 cutoff_date 之後**
                             if cutoff_date and article_datetime_obj <= cutoff_date:
-                                print(f"     ⏭️  跳過舊文章: {link_text}")
-                                print(f"        文章時間: {article_datetime} <= 截止時間: {cutoff_date}")
+                                logging.info(f"     ⏭️  跳過舊文章: {link_text}")
+                                logging.info(f"        文章時間: {article_datetime} <= 截止時間: {cutoff_date}")
                                 continue
                         
                         if href:
@@ -352,8 +352,8 @@ def get_article_links_from_story(story_info):
                             )
                             
                             if should_skip and action_type == "skip":
-                                print(f"     ⏭️  跳過文章: {link_text}")
-                                print(f"        原因: {skip_reason}")
+                                logging.info(f"     ⏭️  跳過文章: {link_text}")
+                                logging.info(f"        原因: {skip_reason}")
                                 continue
                             
                             article_links.append({
@@ -371,21 +371,21 @@ def get_article_links_from_story(story_info):
                             })
                             
                             processed_count += 1
-                            print(f"     {processed_count}. 📄 {link_text}")
-                            print(f"        🏢 媒體: {media}")
-                            print(f"        📅 時間: {article_datetime}")
-                            print(f"        🎯 處理類型: {action_type}")
-                            print(f"        🔗 {full_href}")
+                            logging.info(f"     {processed_count}. 📄 {link_text}")
+                            logging.info(f"        🏢 媒體: {media}")
+                            logging.info(f"        📅 時間: {article_datetime}")
+                            logging.info(f"        🎯 處理類型: {action_type}")
+                            logging.info(f"        🔗 {full_href}")
                             
             except Exception as e:
-                print(f"     ❌ 處理文章元素 {j} 時出錯: {e}")
+                logging.info(f"     ❌ 處理文章元素 {j} 時出錯: {e}")
                 continue
         
         if processed_count == 0 and cutoff_date:
-            print(f"   ℹ️  此故事沒有 {cutoff_date} 之後的新文章")
+            logging.info(f"   ℹ️  此故事沒有 {cutoff_date} 之後的新文章")
         
     except Exception as e:
-        print(f"❌ 處理故事時出錯: {e}")
+        logging.info(f"❌ 處理故事時出錯: {e}")
     finally:
         if driver:
             try:
@@ -404,32 +404,32 @@ def get_final_content(article_info, driver):
     
     for attempt in range(MAX_RETRIES):
         try:
-            print(f"   嘗試第 {attempt + 1} 次訪問...")
+            logging.info(f"   嘗試第 {attempt + 1} 次訪問...")
             
             # 檢查 driver 是否仍然可用
             try:
                 driver.set_page_load_timeout(TIMEOUT)
             except Exception as e:
-                print(f"   ❌ WebDriver 設置超時失敗: {e}")
+                logging.info(f"   ❌ WebDriver 設置超時失敗: {e}")
                 return None
             
             try:
                 driver.get(article_info['article_url'])
             except TimeoutException:
-                print(f"   ⚠️ 頁面加載超時，但繼續嘗試獲取內容...")
+                logging.info(f"   ⚠️ 頁面加載超時，但繼續嘗試獲取內容...")
             except WebDriverException as e:
-                print(f"   ❌ WebDriver 錯誤: {e}")
+                logging.info(f"   ❌ WebDriver 錯誤: {e}")
                 if "chrome not reachable" in str(e).lower() or "session deleted" in str(e).lower():
-                    print(f"   💀 WebDriver 會話已失效")
+                    logging.info(f"   💀 WebDriver 會話已失效")
                     return None
                 if attempt < MAX_RETRIES - 1:
-                    print(f"   🔄 {TIMEOUT//4} 秒後重試...")
+                    logging.info(f"   🔄 {TIMEOUT//4} 秒後重試...")
                     time.sleep(TIMEOUT//4)
                     continue
                 else:
                     return None
             except Exception as e:
-                print(f"   ❌ 未知錯誤: {e}")
+                logging.info(f"   ❌ 未知錯誤: {e}")
                 return None
             
             time.sleep(random.randint(3, 6))
@@ -463,27 +463,27 @@ def get_final_content(article_info, driver):
                 
                 try:
                     final_url = driver.current_url
-                    print(f"   最終網址: {final_url}")
+                    logging.info(f"   最終網址: {final_url}")
                 except Exception as e:
-                    print(f"   ⚠️ 無法獲取當前 URL: {e}")
+                    logging.info(f"   ⚠️ 無法獲取當前 URL: {e}")
                     final_url = article_info['article_url']
                 
                 if final_url.startswith("https://www.google.com/sorry/index?continue=https://news.google.com/read"):
-                    print(f"   ⚠️ 遇到 Google 驗證頁面，嘗試刷新...")
+                    logging.info(f"   ⚠️ 遇到 Google 驗證頁面，嘗試刷新...")
                     try:
                         driver.refresh()
                         time.sleep(random.randint(2, 4))
                         final_url = driver.current_url
                     except:
-                        print(f"   ❌ 刷新失敗")
+                        logging.info(f"   ❌ 刷新失敗")
                         return None
                         
                 elif any(final_url.startswith(pattern) for pattern in skip_patterns):
-                    print(f"   ⏭️  跳過連結: {final_url}")
+                    logging.info(f"   ⏭️  跳過連結: {final_url}")
                     return None
                 
             except WebDriverException as e:
-                print(f"   ❌ 獲取 URL 時出錯: {e}")
+                logging.info(f"   ❌ 獲取 URL 時出錯: {e}")
                 if "chrome not reachable" in str(e).lower():
                     return None
                 final_url = article_info['article_url']
@@ -491,7 +491,7 @@ def get_final_content(article_info, driver):
             try:
                 html = driver.page_source
                 if not html or len(html) < 100:  # 檢查頁面內容是否有效
-                    print(f"   ⚠️ 頁面內容過短或為空")
+                    logging.info(f"   ⚠️ 頁面內容過短或為空")
                     if attempt < MAX_RETRIES - 1:
                         continue
                     else:
@@ -499,17 +499,17 @@ def get_final_content(article_info, driver):
                         
                 soup = BeautifulSoup(html, "html.parser")
             except WebDriverException as e:
-                print(f"   ❌ 無法獲取頁面源碼: {e}")
+                logging.info(f"   ❌ 無法獲取頁面源碼: {e}")
                 if "chrome not reachable" in str(e).lower():
                     return None
                 if attempt < MAX_RETRIES - 1:
-                    print(f"   🔄 {TIMEOUT//2} 秒後重試...")
+                    logging.info(f"   🔄 {TIMEOUT//2} 秒後重試...")
                     time.sleep(TIMEOUT//2)
                     continue
                 else:
                     return None
             except Exception as e:
-                print(f"   ❌ 解析頁面時出錯: {e}")
+                logging.info(f"   ❌ 解析頁面時出錯: {e}")
                 return None
 
             # 內容提取邏輯（保持原有邏輯）
@@ -580,17 +580,17 @@ def get_final_content(article_info, driver):
                     body_content = body_content.replace('"', '\\"')
                     
                 except Exception as e:
-                    print(f"   ❌ 內容清理時出錯: {e}")
+                    logging.info(f"   ❌ 內容清理時出錯: {e}")
                     body_content = ""
             else:
                 body_content = ""
-                print(f"   ⚠️ 未找到可用的內容")
+                logging.info(f"   ⚠️ 未找到可用的內容")
                 
             article_id = str(uuid.uuid4())
 
             if ("您的網路已遭到停止訪問本網站的權利。" in body_content or 
                 "我們的系統偵測到您的電腦網路送出的流量有異常情況。" in body_content):
-                print(f"   ⚠️ 文章 {article_id} 被封鎖，無法訪問")
+                logging.info(f"   ⚠️ 文章 {article_id} 被封鎖，無法訪問")
                 return None
 
             return {
@@ -611,15 +611,15 @@ def get_final_content(article_info, driver):
             }
             
         except Exception as e:
-            print(f"   ❌ 第 {attempt + 1} 次嘗試失敗: {e}")
+            logging.info(f"   ❌ 第 {attempt + 1} 次嘗試失敗: {e}")
             if "chrome not reachable" in str(e).lower():
-                print(f"   💀 Chrome 瀏覽器無法連接，返回 None")
+                logging.info(f"   💀 Chrome 瀏覽器無法連接，返回 None")
                 return None
             if attempt < MAX_RETRIES - 1:
-                print(f"   🔄 {TIMEOUT//2} 秒後重試...")
+                logging.info(f"   🔄 {TIMEOUT//2} 秒後重試...")
                 time.sleep(TIMEOUT//2)
             else:
-                print(f"   💀 已達到最大重試次數，放棄該文章")
+                logging.info(f"   💀 已達到最大重試次數，放棄該文章")
     
     return None
 
@@ -665,8 +665,8 @@ def check_story_exists_in_supabase(story_url, category, article_datetime="", art
                 
                 if days_diff <= 3:
                     # 在3天內，使用現有故事ID
-                    print(f"   🔄 使用現有故事ID: {story_id} (距離上次爬取 {days_diff} 天)")
-                    print(f"   📅 上次爬取時間: {existing_crawl_date}")
+                    logging.info(f"   🔄 使用現有故事ID: {story_id} (距離上次爬取 {days_diff} 天)")
+                    logging.info(f"   📅 上次爬取時間: {existing_crawl_date}")
                     
                     # 3. 檢查文章是否在 crawl_date 之後
                     if article_datetime and article_datetime != "未知時間":
@@ -679,7 +679,7 @@ def check_story_exists_in_supabase(story_url, category, article_datetime="", art
                                 return True, "skip", existing_story, f"文章時間 {article_datetime} 早於上次爬取時間 {existing_crawl_date}"
                                 
                         except Exception as date_parse_error:
-                            print(f"   ⚠️ 文章時間解析錯誤: {date_parse_error}")
+                            logging.info(f"   ⚠️ 文章時間解析錯誤: {date_parse_error}")
                             # 如果無法解析文章時間，繼續檢查 URL
                     
                     # 4. 檢查文章URL是否已存在
@@ -703,11 +703,11 @@ def check_story_exists_in_supabase(story_url, category, article_datetime="", art
                 return False, "create_new_story", None, "缺少爬取日期，創建新故事"
                 
         except Exception as date_error:
-            print(f"   ⚠️ 日期解析錯誤: {date_error}")
+            logging.info(f"   ⚠️ 日期解析錯誤: {date_error}")
             return False, "create_new_story", None, f"日期解析錯誤: {date_error}"
             
     except Exception as e:
-        print(f"   ❌ 檢查Supabase時出錯: {e}")
+        logging.info(f"   ❌ 檢查Supabase時出錯: {e}")
         return False, "create_new_story", None, f"資料庫檢查錯誤: {e}"
 
 
@@ -726,11 +726,11 @@ def save_story_to_supabase(story_data):
         
         # 使用 upsert 來避免重複插入
         response = supabase.table("stories").upsert(story_record, on_conflict="story_id").execute()
-        print(f"   ✅ 故事已保存到資料庫: {story_data['story_id']}")
+        logging.info(f"   ✅ 故事已保存到資料庫: {story_data['story_id']}")
         return True
         
     except Exception as e:
-        print(f"   ❌ 保存故事到資料庫失敗: {e}")
+        logging.info(f"   ❌ 保存故事到資料庫失敗: {e}")
         return False
 
 def save_article_to_supabase(article_data, story_id):
@@ -751,17 +751,17 @@ def save_article_to_supabase(article_data, story_id):
         article_url = article_data["article_url"]
         existing_article = supabase.table("cleaned_news").select("article_id").eq("article_url", article_url).execute()
         if existing_article.data:
-            print(f"   ⚠️ 文章已存在，跳過保存: {article_data['article_id']}")
+            logging.info(f"   ⚠️ 文章已存在，跳過保存: {article_data['article_id']}")
             return True
         elif not article_data["content"] or "[清洗失敗]" in article_data["content"] or "請提供" in article_data["content"]:
-            print(f"   ⚠️ 文章內容無效，跳過保存: {article_data['article_id']}")
+            logging.info(f"   ⚠️ 文章內容無效，跳過保存: {article_data['article_id']}")
             return True
         response = supabase.table("cleaned_news").upsert(article_record, on_conflict="article_url").execute()
-        print(f"   ✅ 文章已保存到資料庫: {article_data['article_id']}")
+        logging.info(f"   ✅ 文章已保存到資料庫: {article_data['article_id']}")
         return True
         
     except Exception as e:
-        print(f"   ❌ 保存文章到資料庫失敗: {e}")
+        logging.info(f"   ❌ 保存文章到資料庫失敗: {e}")
         return False
 
 def group_articles_by_story_and_time(processed_articles, time_window_days=3):
@@ -777,8 +777,8 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
     Returns:
         list: 處理後的故事列表，包含 action_type 欄位
     """
-    print(f"\n=== 開始基於故事和時間分組文章 ===")
-    print(f"時間窗口: {time_window_days}天")
+    logging.info(f"\n=== 開始基於故事和時間分組文章 ===")
+    logging.info(f"時間窗口: {time_window_days}天")
     
     # 按故事ID分組
     story_grouped = defaultdict(list)
@@ -803,17 +803,17 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
         is_existing_story = existing_story_data and first_article.get("action_type") == "add_to_existing_story"
         
         if is_existing_story:
-            print(f"\n🔄 更新現有故事: {story_title}")
-            print(f"   🆔 Story ID: {story_id}")
-            print(f"   📅 原有 Crawl Date: {existing_story_data.get('crawl_date', '未知')}")
-            print(f"   📅 原有時間範圍: {existing_story_data.get('time_range', '未知')}")
+            logging.info(f"\n🔄 更新現有故事: {story_title}")
+            logging.info(f"   🆔 Story ID: {story_id}")
+            logging.info(f"   📅 原有 Crawl Date: {existing_story_data.get('crawl_date', '未知')}")
+            logging.info(f"   📅 原有時間範圍: {existing_story_data.get('time_range', '未知')}")
             base_action_type = "update_existing_story"
         else:
-            print(f"\n🆕 處理新故事: {story_title}")
-            print(f"   🆔 Story ID: {story_id}")
+            logging.info(f"\n🆕 處理新故事: {story_title}")
+            logging.info(f"   🆔 Story ID: {story_id}")
             base_action_type = "create_new_story"
         
-        print(f"   📊 包含 {len(articles)} 篇文章")
+        logging.info(f"   📊 包含 {len(articles)} 篇文章")
         
         # 解析所有文章的時間
         articles_with_time = []
@@ -827,7 +827,7 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
                         'datetime': parsed_dt
                     })
                 except (ValueError, TypeError) as e:
-                    print(f"⚠️ 解析時間失敗: {article_datetime}, 使用當前時間")
+                    logging.info(f"⚠️ 解析時間失敗: {article_datetime}, 使用當前時間")
                     articles_with_time.append({
                         'article': article,
                         'datetime': datetime.now()
@@ -844,7 +844,7 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
         
         # 執行時間窗口分組
         time_groups = _create_time_groups(articles_with_time, time_window_days)
-        print(f"   📊 在故事內分成 {len(time_groups)} 個時間組")
+        logging.info(f"   📊 在故事內分成 {len(time_groups)} 個時間組")
 
         # 為每個時間組創建最終的故事數據
         for group_idx, group in enumerate(time_groups):
@@ -858,10 +858,10 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
                 original_crawl_date = existing_story_data.get('crawl_date')
                 if original_crawl_date:
                     crawl_date = original_crawl_date
-                    print(f"      📅 保持原有 Crawl Date: {crawl_date}")
+                    logging.info(f"      📅 保持原有 Crawl Date: {crawl_date}")
                 else:
                     crawl_date = datetime.now().strftime("%Y/%m/%d %H:%M")
-                    print(f"      📅 使用當前時間作為 Crawl Date: {crawl_date}")
+                    logging.info(f"      📅 使用當前時間作為 Crawl Date: {crawl_date}")
             else:
                 # 新故事：使用最早文章時間
                 crawl_date = earliest_time.strftime("%Y/%m/%d %H:%M")
@@ -888,10 +888,10 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
                     else:
                         time_range = f"{combined_start.strftime('%Y/%m/%d')} - {combined_end.strftime('%Y/%m/%d')}"
                     
-                    print(f"      📅 合併時間範圍: {original_time_range} + {earliest_time.strftime('%Y/%m/%d')}~{latest_time.strftime('%Y/%m/%d')} = {time_range}")
+                    logging.info(f"      📅 合併時間範圍: {original_time_range} + {earliest_time.strftime('%Y/%m/%d')}~{latest_time.strftime('%Y/%m/%d')} = {time_range}")
                     
                 except (ValueError, TypeError) as e:
-                    print(f"      ⚠️ 解析原有時間範圍失敗: {original_time_range}，使用新文章時間範圍")
+                    logging.info(f"      ⚠️ 解析原有時間範圍失敗: {original_time_range}，使用新文章時間範圍")
                     # 如果解析失敗，使用新文章的時間範圍
                     if earliest_time.date() == latest_time.date():
                         time_range = earliest_time.strftime('%Y/%m/%d')
@@ -967,16 +967,16 @@ def group_articles_by_story_and_time(processed_articles, time_window_days=3):
             actual_days = (latest_time.date() - earliest_time.date()).days + 1
             
             if len(time_groups) > 1:
-                print(f"   📰 時間組 {group_idx + 1}: {time_range} (實際跨度: {actual_days}天)")
+                logging.info(f"   📰 時間組 {group_idx + 1}: {time_range} (實際跨度: {actual_days}天)")
             else:
-                print(f"   📰 完整故事: {time_range} (實際跨度: {actual_days}天)")
+                logging.info(f"   📰 完整故事: {time_range} (實際跨度: {actual_days}天)")
             
-            print(f"      🆔 最終 Story ID: {final_story_id}")
-            print(f"      📅 Crawl Date: {crawl_date}")
-            print(f"      📄 文章數: {len(grouped_articles)} 篇")
-            print(f"      🎯 處理類型: {final_action_type}")
+            logging.info(f"      🆔 最終 Story ID: {final_story_id}")
+            logging.info(f"      📅 Crawl Date: {crawl_date}")
+            logging.info(f"      📄 文章數: {len(grouped_articles)} 篇")
+            logging.info(f"      🎯 處理類型: {final_action_type}")
     
-    print(f"\n✅ 總共處理完成 {len(all_final_stories)} 個最終故事")
+    logging.info(f"\n✅ 總共處理完成 {len(all_final_stories)} 個最終故事")
     return all_final_stories
 
 
@@ -997,29 +997,29 @@ def _create_time_groups(articles_with_time, time_window_days):
             current_group_start_time = article_time
             current_group_end_time = article_time + timedelta(days=time_window_days)
             current_group.append(item)
-            print(f"      🏁 開始新組: {current_group_start_time.strftime('%Y/%m/%d %H:%M')} - {current_group_end_time.strftime('%Y/%m/%d %H:%M')}")
+            logging.info(f"      🏁 開始新組: {current_group_start_time.strftime('%Y/%m/%d %H:%M')} - {current_group_end_time.strftime('%Y/%m/%d %H:%M')}")
         else:
             # 檢查是否在當前組的時間窗口內
             if article_time < current_group_end_time:
                 # 在同一組內
                 current_group.append(item)
-                print(f"         ✅ 加入當前組: {article_time.strftime('%Y/%m/%d %H:%M')}")
+                logging.info(f"         ✅ 加入當前組: {article_time.strftime('%Y/%m/%d %H:%M')}")
             else:
                 # 超出時間窗口，開始新的一組
                 if current_group:
                     time_groups.append(current_group)
-                    print(f"      📦 完成組別，包含 {len(current_group)} 篇文章")
+                    logging.info(f"      📦 完成組別，包含 {len(current_group)} 篇文章")
                 
                 # 開始新組
                 current_group = [item]
                 current_group_start_time = article_time
                 current_group_end_time = article_time + timedelta(days=time_window_days)
-                print(f"      🏁 開始新組: {current_group_start_time.strftime('%Y/%m/%d %H:%M')} - {current_group_end_time.strftime('%Y/%m/%d %H:%M')}")
+                logging.info(f"      🏁 開始新組: {current_group_start_time.strftime('%Y/%m/%d %H:%M')} - {current_group_end_time.strftime('%Y/%m/%d %H:%M')}")
     
     # 添加最後一組
     if current_group:
         time_groups.append(current_group)
-        print(f"      📦 完成最後組別，包含 {len(current_group)} 篇文章")
+        logging.info(f"      📦 完成最後組別，包含 {len(current_group)} 篇文章")
     
     return time_groups
 
@@ -1049,33 +1049,33 @@ def save_stories_to_supabase(stories):
                         "crawl_date": story["crawl_date"]
                     }
                     # response = supabase.table("stories").update(update_data).eq("story_id", story_id).execute()
-                    print(f"   ✅ 故事 crawl_date 已更新: {story_id}")
+                    logging.info(f"   ✅ 故事 crawl_date 已更新: {story_id}")
                     updated_stories += 1
                 except Exception as e:
-                    print(f"   ❌ 更新故事 crawl_date 失敗: {e}")
+                    logging.info(f"   ❌ 更新故事 crawl_date 失敗: {e}")
             
             # 保存文章（無論是新故事還是現有故事）
             for article in story["articles"]:
                 if save_article_to_supabase(article, story_id):
                     saved_articles += 1
         
-        print(f"✅ 批量保存完成: {saved_stories} 個新故事, {updated_stories} 個更新故事, {saved_articles} 篇文章")
+        logging.info(f"✅ 批量保存完成: {saved_stories} 個新故事, {updated_stories} 個更新故事, {saved_articles} 篇文章")
         return True
         
     except Exception as e:
-        print(f"❌ 批量保存到Supabase時出錯: {e}")
+        logging.info(f"❌ 批量保存到Supabase時出錯: {e}")
         return False
 
 def process_news_pipeline(main_url, category):
     """
     完整的新聞處理管道 - 改進的 WebDriver 管理
     """
-    print(f"🚀 開始處理 {category} 分類的新聞...")
+    logging.info(f"🚀 開始處理 {category} 分類的新聞...")
     
     # 步驟1: 獲取所有故事連結
     story_links = get_main_story_links(main_url, category)
     if not story_links:
-        print("❌ 沒有找到任何故事連結")
+        logging.info("❌ 沒有找到任何故事連結")
         return []
     
     # 步驟2: 處理每個故事，獲取所有文章連結
@@ -1085,10 +1085,10 @@ def process_news_pipeline(main_url, category):
         all_article_links.extend(article_links)
     
     if not all_article_links:
-        print("❌ 沒有找到任何文章連結")
+        logging.info("❌ 沒有找到任何文章連結")
         return []
     
-    print(f"\n📊 總共收集到 {len(all_article_links)} 篇文章待處理")
+    logging.info(f"\n📊 總共收集到 {len(all_article_links)} 篇文章待處理")
     
     # 步驟3: 獲取每篇文章的完整內容 - 改進的錯誤處理
     final_articles = []
@@ -1103,48 +1103,48 @@ def process_news_pipeline(main_url, category):
             initialize_driver_with_cookies(new_driver)
             return new_driver
         except Exception as e:
-            print(f"   ❌ 創建新 WebDriver 失敗: {e}")
+            logging.info(f"   ❌ 創建新 WebDriver 失敗: {e}")
             return None
     
     # 初始化 driver
     driver = create_fresh_driver()
     if not driver:
-        print("❌ 無法創建初始 WebDriver，終止處理")
+        logging.info("❌ 無法創建初始 WebDriver，終止處理")
         return []
     
     try:
         for i, article_info in enumerate(all_article_links, 1):
-            print(f"\n🔄 處理文章 {i}/{len(all_article_links)}: {article_info['article_title']}")
+            logging.info(f"\n🔄 處理文章 {i}/{len(all_article_links)}: {article_info['article_title']}")
             
             # 檢查 driver 是否仍然有效
             try:
                 # 簡單的 driver 健康檢查
                 current_url = driver.current_url
             except Exception as e:
-                print(f"   ⚠️ WebDriver 異常，重新創建: {e}")
+                logging.info(f"   ⚠️ WebDriver 異常，重新創建: {e}")
                 try:
                     driver.quit()
                 except:
                     pass
                 driver = create_fresh_driver()
                 if not driver:
-                    print(f"   ❌ 無法重新創建 WebDriver，跳過剩餘 {len(all_article_links) - i + 1} 篇文章")
+                    logging.info(f"   ❌ 無法重新創建 WebDriver，跳過剩餘 {len(all_article_links) - i + 1} 篇文章")
                     break
             
             article_content = get_final_content(article_info, driver)
             
             if article_content:
                 final_articles.append(article_content)
-                print(f"   ✅ 成功獲取內容")
+                logging.info(f"   ✅ 成功獲取內容")
                 consecutive_failures = 0  # 重置連續失敗計數
                 
             else:
-                print(f"   ❌ 無法獲取內容")
+                logging.info(f"   ❌ 無法獲取內容")
                 consecutive_failures += 1
                 
                 # 檢查是否需要重新創建 driver
                 if consecutive_failures >= max_consecutive_failures:
-                    print(f"   🔄 連續 {consecutive_failures} 次失敗，重新創建 WebDriver...")
+                    logging.info(f"   🔄 連續 {consecutive_failures} 次失敗，重新創建 WebDriver...")
                     
                     try:
                         driver.quit()
@@ -1153,42 +1153,42 @@ def process_news_pipeline(main_url, category):
                     
                     driver = create_fresh_driver()
                     if not driver:
-                        print(f"   ❌ 無法重新創建 WebDriver，跳過剩餘 {len(all_article_links) - i + 1} 篇文章")
+                        logging.info(f"   ❌ 無法重新創建 WebDriver，跳過剩餘 {len(all_article_links) - i + 1} 篇文章")
                         break
                     
                     consecutive_failures = 0  # 重置計數
-                    print(f"   ✅ WebDriver 重新創建完成")
+                    logging.info(f"   ✅ WebDriver 重新創建完成")
                     
                     # 可選：重新嘗試當前文章
-                    print(f"   🔄 重新嘗試處理當前文章...")
+                    logging.info(f"   🔄 重新嘗試處理當前文章...")
                     article_content = get_final_content(article_info, driver)
                     if article_content:
                         final_articles.append(article_content)
-                        print(f"   ✅ 重新嘗試成功")
+                        logging.info(f"   ✅ 重新嘗試成功")
                     else:
-                        print(f"   ❌ 重新嘗試仍然失敗")
+                        logging.info(f"   ❌ 重新嘗試仍然失敗")
             
             # 隨機延遲
             time.sleep(random.randint(2, 4))
             
     except KeyboardInterrupt:
-        print(f"\n⚡ 用戶中斷處理")
+        logging.info(f"\n⚡ 用戶中斷處理")
         
     except Exception as e:
-        print(f"\n💥 處理過程中發生嚴重錯誤: {e}")
+        logging.info(f"\n💥 處理過程中發生嚴重錯誤: {e}")
         import traceback
-        print(f"📋 錯誤詳情:\n{traceback.format_exc()}")
+        logging.info(f"📋 錯誤詳情:\n{traceback.format_exc()}")
         
     finally:
         if driver:
             try:
-                print(f"\n🔧 清理 WebDriver 資源...")
+                logging.info(f"\n🔧 清理 WebDriver 資源...")
                 driver.quit()
-                print(f"   ✅ WebDriver 清理完成")
+                logging.info(f"   ✅ WebDriver 清理完成")
             except Exception as e:
-                print(f"   ⚠️ WebDriver 清理時出現問題: {e}")
+                logging.info(f"   ⚠️ WebDriver 清理時出現問題: {e}")
     
-    print(f"\n📊 文章內容獲取完成: 成功 {len(final_articles)}/{len(all_article_links)} 篇")
+    logging.info(f"\n📊 文章內容獲取完成: 成功 {len(final_articles)}/{len(all_article_links)} 篇")
     
     # 步驟4: 按故事和時間分組
     final_stories = group_articles_by_story_and_time(final_articles, time_window_days=3)
@@ -1213,23 +1213,23 @@ def initialize_driver_with_cookies(driver):
                 try:
                     driver.add_cookie(cookie)
                 except Exception as e:
-                    print(f"⚠️ 無法添加 cookie: {e}")
+                    logging.info(f"⚠️ 無法添加 cookie: {e}")
             
-            print("✅ Cookies 載入完成")
+            logging.info("✅ Cookies 載入完成")
             
         except FileNotFoundError:
-            print("⚠️ cookies.json 檔案不存在，使用默認設置")
+            logging.info("⚠️ cookies.json 檔案不存在，使用默認設置")
     
     except Exception as e:
-        print(f"⚠️ 初始化 WebDriver cookies 時出錯: {e}")
+        logging.info(f"⚠️ 初始化 WebDriver cookies 時出錯: {e}")
 
 def main():
     """
     主函數 - 新聞爬蟲的入口點
     """
-    print("="*80)
-    print("🌟 Google News 爬蟲程序啟動")
-    print("="*80)
+    logging.info("="*80)
+    logging.info("🌟 Google News 爬蟲程序啟動")
+    logging.info("="*80)
     
     # 配置需要處理的新聞分類
     news_categories = {
@@ -1255,13 +1255,13 @@ def main():
     try:
         for category in selected_categories:
             if category not in news_categories:
-                print(f"⚠️ 未知的分類: {category}")
+                logging.info(f"⚠️ 未知的分類: {category}")
                 continue
                 
             category_start_time = time.time()
-            print(f"\n{'='*60}")
-            print(f"🎯 開始處理分類: {category}")
-            print(f"{'='*60}")
+            logging.info(f"\n{'='*60}")
+            logging.info(f"🎯 開始處理分類: {category}")
+            logging.info(f"{'='*60}")
             
             # 處理該分類的新聞
             category_stories = process_news_pipeline(news_categories[category], category)
@@ -1271,27 +1271,27 @@ def main():
                 category_end_time = time.time()
                 category_duration = category_end_time - category_start_time
                 
-                print(f"\n✅ {category} 分類處理完成!")
-                print(f"   📊 獲得 {len(category_stories)} 個故事")
-                print(f"   ⏱️  耗時: {category_duration:.2f} 秒")
+                logging.info(f"\n✅ {category} 分類處理完成!")
+                logging.info(f"   📊 獲得 {len(category_stories)} 個故事")
+                logging.info(f"   ⏱️  耗時: {category_duration:.2f} 秒")
             else:
-                print(f"\n❌ {category} 分類處理失敗，沒有獲得任何故事")
+                logging.info(f"\n❌ {category} 分類處理失敗，沒有獲得任何故事")
             
             # 分類之間的延遲
             if category != selected_categories[-1]:  # 不是最後一個分類
-                print(f"\n⏳ 等待 30 秒後處理下一個分類...")
+                logging.info(f"\n⏳ 等待 30 秒後處理下一個分類...")
                 time.sleep(30)
         
         # 處理完成後的統計
         total_end_time = time.time()
         total_duration = total_end_time - start_time
         
-        print(f"\n{'='*80}")
-        print(f"🎉 所有分類處理完成!")
-        print(f"{'='*80}")
-        print(f"📊 最終統計:")
-        print(f"   🏷️  處理分類數: {len(selected_categories)}")
-        print(f"   📰 總故事數: {len(all_final_stories)}")
+        logging.info(f"\n{'='*80}")
+        logging.info(f"🎉 所有分類處理完成!")
+        logging.info(f"{'='*80}")
+        logging.info(f"📊 最終統計:")
+        logging.info(f"   🏷️  處理分類數: {len(selected_categories)}")
+        logging.info(f"   📰 總故事數: {len(all_final_stories)}")
         
         # 統計每個分類的故事數
         category_counts = {}
@@ -1302,10 +1302,10 @@ def main():
             total_articles += len(story['articles'])
         
         for category, count in category_counts.items():
-            print(f"   📂 {category}: {count} 個故事")
+            logging.info(f"   📂 {category}: {count} 個故事")
         
-        print(f"   📄 總文章數: {total_articles}")
-        print(f"   ⏱️  總耗時: {total_duration:.2f} 秒 ({total_duration/60:.1f} 分鐘)")
+        logging.info(f"   📄 總文章數: {total_articles}")
+        logging.info(f"   ⏱️  總耗時: {total_duration:.2f} 秒 ({total_duration/60:.1f} 分鐘)")
         
         # 保存數據
         if all_final_stories:
@@ -1316,28 +1316,28 @@ def main():
             # 保存到數據庫（如果需要）
             try:
                 save_stories_to_supabase(all_final_stories)
-                print("💾 數據庫保存: 已跳過 (請根據需要實現)")
+                logging.info("💾 數據庫保存: 已跳過 (請根據需要實現)")
             except Exception as e:
-                print(f"❌ 數據庫保存失敗: {e}")
+                logging.info(f"❌ 數據庫保存失敗: {e}")
             
         else:
-            print("⚠️ 沒有獲得任何故事數據")
+            logging.info("⚠️ 沒有獲得任何故事數據")
     
     except KeyboardInterrupt:
-        print(f"\n⚡ 程序被用戶中斷")
+        logging.info(f"\n⚡ 程序被用戶中斷")
         if all_final_stories:
             # 即使被中斷，也保存已獲取的數據
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     except Exception as e:
-        print(f"\n💥 程序執行過程中發生錯誤: {e}")
+        logging.info(f"\n💥 程序執行過程中發生錯誤: {e}")
         import traceback
-        print(f"📋 錯誤詳情:\n{traceback.format_exc()}")
+        logging.info(f"📋 錯誤詳情:\n{traceback.format_exc()}")
     
     finally:
-        print(f"\n{'='*80}")
-        print(f"👋 Google News 爬蟲程序結束")
-        print(f"{'='*80}")
+        logging.info(f"\n{'='*80}")
+        logging.info(f"👋 Google News 爬蟲程序結束")
+        logging.info(f"{'='*80}")
 
 if __name__ == "__main__":
     main()

@@ -36,8 +36,8 @@ def main():
     logging.info("🟢 啟動，立即執行一次")
     run_scripts()
 
-    # 設定排程（每 59 分鐘執行一次）
-    schedule.every(59).minutes.do(lambda: logging.info("🔁 排程觸發") or run_scripts())
+    # 設定排程（每 12 小時執行一次）
+    schedule.every(12).hours.do(lambda: logging.info("🔁 排程觸發") or run_scripts())
 
     # 持續運行排程
     while True:
