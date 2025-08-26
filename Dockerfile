@@ -1,45 +1,22 @@
-# 使用官方 Python 基底映像
-FROM python:3.11-slim
+# 使用 Selenium 官方 standalone-chrome 映像
+FROM selenium/standalone-chrome:latest
 
 # 設定工作目錄
 WORKDIR /app
 
-# 安裝必要套件 (Chromium + Chromedriver + 依賴庫)
-RUN apt-get update && apt-get install -y \
-    chromium \
-    chromium-driver \
-    fonts-liberation \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libx11-6 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxtst6 \
-    libgbm1 \
-    libasound2 \
-    xdg-utils \
-    wget \
-    curl \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+# 安裝 Python
+USER root
+RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
 
-# 複製需求檔案並安裝 Python 依賴
+# 複製專案需求
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # 複製專案程式碼
 COPY . .
 
-# 預設環境變數 (讓 selenium 找到 chromium)
-ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROMEDRIVER_BIN=/usr/bin/chromedriver
+# 切回 seluser（Selenium 官方映像默認使用）
+USER seluser
 
-# 啟動程式 (修改成你的主程式名稱)
-CMD ["python", "schedule_test.py"]
+# 執行主程式
+CMD ["python3", "schedule_test.py"]

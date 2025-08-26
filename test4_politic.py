@@ -28,6 +28,7 @@ import logging
 # Supabase imports
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 load_dotenv()
 
@@ -174,7 +175,14 @@ def create_robust_driver(headless: bool = False):
     options.add_experimental_option("prefs", prefs)
 
     try:
-        driver = webdriver.Chrome(executable_path=driver_bin, options=options)
+        driver = webdriver.Remote(
+            command_executor='http://localhost:4444/wd/hub',  # standalone-chrome 容器內建 Selenium Server
+            desired_capabilities=DesiredCapabilities.CHROME
+        )
+
+        # 設定 headless 模式
+        driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow"})
+
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
     except Exception as e:
