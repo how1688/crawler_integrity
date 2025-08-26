@@ -27,7 +27,9 @@ import shutil
 import logging
 # Supabase imports
 from supabase import create_client, Client
+from dotenv import load_dotenv
 
+load_dotenv()
 # Supabase 配置
 SUPABASE_URL = os.getenv("SUPABASE_URL")  # 替換為你的 Supabase URL
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # 替換為你的 Supabase API Key

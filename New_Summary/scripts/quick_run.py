@@ -10,7 +10,7 @@ from datetime import datetime
 # 確保載入 .env 檔案
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"))  
+    load_dotenv()#os.path.join(os.path.dirname(__file__), "../.env"))  
 except ImportError:
     pass
 
