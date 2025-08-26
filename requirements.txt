@@ -18,4 +18,10 @@ supabase>=1.0.0
 google
 google-genai
 
+# 定時排程
+schedule>=1.2.0
+
+# 環境變數管理
+python-dotenv>=1.0.0
+
 # UUID / JSON / OS / shutil / random / re 都是 Python 標準庫，不需額外安裝
