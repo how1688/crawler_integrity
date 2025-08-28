@@ -176,7 +176,7 @@ def create_robust_driver(headless: bool = False):
 
     try:
         driver = webdriver.Remote(
-            command_executor='https://standalone-chrome-production-812f.up.railway.app/wd/hub',
+            command_executor='https://selenium-hub-production-28a1.up.railway.app',
             options=options
         )
 
@@ -343,7 +343,7 @@ def get_article_links_from_story(story_info):
                             dt_str = time_element.get("datetime")
                             dt_obj = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
                             article_datetime_obj = dt_obj + timedelta(hours=8)
-                            article_datetime = article_datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
+                            article_datetime = article_datetime_obj.strftime("%Y/%m/%d %H:%M:%S")
                             
                             # **重要：檢查文章時間是否在 cutoff_date 之後**
                             if cutoff_date and article_datetime_obj <= cutoff_date:
