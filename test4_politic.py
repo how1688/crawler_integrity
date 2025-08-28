@@ -176,8 +176,8 @@ def create_robust_driver(headless: bool = False):
 
     try:
         driver = webdriver.Remote(
-            command_executor='http://localhost:4444/wd/hub',  # standalone-chrome 容器內建 Selenium Server
-            desired_capabilities=DesiredCapabilities.CHROME
+            command_executor='https://standalone-chrome-production-812f.up.railway.app/wd/hub',
+            options=options
         )
 
         # 設定 headless 模式
@@ -767,7 +767,7 @@ def save_article_to_supabase(article_data, story_id):
         elif not article_data["content"] or "[清洗失敗]" in article_data["content"] or "請提供" in article_data["content"]:
             logging.info(f"   ⚠️ 文章內容無效，跳過保存: {article_data['article_id']}")
             return True
-        response = supabase.table("cleaned_news").upsert(article_record, on_conflict="article_url").execute()
+        response = supabase.table("cleaned_news").upsert(article_record, on_conflict="article_id").execute()
         logging.info(f"   ✅ 文章已保存到資料庫: {article_data['article_id']}")
         return True
         
