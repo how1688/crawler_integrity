@@ -187,7 +187,11 @@ def create_robust_driver(headless: bool = False):
         )
 
         # 設定 headless 模式
-        driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow"})
+        params = {
+            "behavior": "allow",
+            "downloadPath": "/tmp/downloads"
+        }
+        driver.execute_cdp_cmd("Page.setDownloadBehavior", params)
 
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
