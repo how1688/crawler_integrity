@@ -122,6 +122,8 @@ def create_robust_driver(headless: bool = False):
     options.add_argument("--disable-web-security")
     options.add_argument("--disable-features=VizDisplayCompositor")
     options.add_argument("--page-load-strategy=eager")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--remote-debugging-port=9222")
 
     # 用戶代理
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
