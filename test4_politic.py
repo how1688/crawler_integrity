@@ -182,7 +182,7 @@ def create_robust_driver(headless: bool = False):
 
     try:
         driver = webdriver.Remote(
-            command_executor='https://selenium-hub-production-28a1.up.railway.app:4444/wd/hub',       
+            command_executor='http://127.0.0.1:4444/wd/hub',       
             options=options
         )
 
