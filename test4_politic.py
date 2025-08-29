@@ -32,8 +32,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 load_dotenv()
 
-download_dir = "/tmp/downloads"
-os.makedirs(download_dir, exist_ok=True)
+download_dir = os.getenv("DOWNLOAD_DIR", "/downloads")
 
 chrome_bin = os.environ.get("CHROME_BIN")
 driver_bin = os.environ.get("CHROMEDRIVER_BIN")
@@ -164,6 +163,7 @@ def create_robust_driver(headless: bool = False):
         "download.default_directory": download_dir,
         "download.prompt_for_download": False,
         "directory_upgrade": True,
+        "safebrowsing.enabled": True,
 
         # 阻擋通知、插件、彈窗、地理位置、攝影機/麥克風
         "profile.default_content_setting_values.notifications": 2,

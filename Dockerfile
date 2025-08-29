@@ -4,6 +4,10 @@ FROM selenium/standalone-chrome:latest
 # 設定工作目錄
 WORKDIR /app
 
+# Railway 容器裡建立 /downloads 目錄
+RUN mkdir -p /downloads && chmod 777 /downloads
+ENV DOWNLOAD_DIR=/downloads
+
 # 安裝 Python
 USER root
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
