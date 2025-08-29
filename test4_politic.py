@@ -32,6 +32,9 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 load_dotenv()
 
+download_dir = "/tmp/downloads"
+os.makedirs(download_dir, exist_ok=True)
+
 chrome_bin = os.environ.get("CHROME_BIN")
 driver_bin = os.environ.get("CHROMEDRIVER_BIN")
 
@@ -158,25 +161,28 @@ def create_robust_driver(headless: bool = False):
     # options.binary_location = chrome_bin   # 告訴 Selenium 去用 Chromium
     # 阻擋特定內容類型
     prefs = {
-        "profile.default_content_setting_values": {
-            "notifications": 2,  # 阻擋通知
-            "plugins": 2,        # 阻擋插件
-            "popups": 2,         # 阻擋彈出窗口
-            "geolocation": 2,    # 阻擋位置請求
-            "media_stream": 2,   # 阻擋攝像頭/麥克風
-        },
-        "profile.managed_default_content_settings": {
-            "images": 2,         # 1=允許, 2=阻擋圖片
-        },
-        "profile.default_content_settings": {
-            "popups": 2
-        }
+        "download.default_directory": download_dir,
+        "download.prompt_for_download": False,
+        "directory_upgrade": True,
+
+        # 阻擋通知、插件、彈窗、地理位置、攝影機/麥克風
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.default_content_setting_values.plugins": 2,
+        "profile.default_content_setting_values.popups": 2,
+        "profile.default_content_setting_values.geolocation": 2,
+        "profile.default_content_setting_values.media_stream": 2,
+
+        # 阻擋圖片
+        "profile.managed_default_content_settings.images": 2,
+
+        # 阻擋彈窗
+        "profile.default_content_settings.popups": 2,
     }
     options.add_experimental_option("prefs", prefs)
 
     try:
         driver = webdriver.Remote(
-            command_executor='https://selenium-hub-production-28a1.up.railway.app/wd/hub',
+            command_executor='https://selenium-hub-production-28a1.up.railway.app:4444/wd/hub',       
             options=options
         )
 
@@ -333,7 +339,8 @@ def get_article_links_from_story(story_info):
                                      "警政時報", "大紀元", "新唐人電視台", "arch-web.com.tw",
                                      "韓聯社", "公視新聞網PNN", "優分析UAnalyze", "AASTOCKS.com",
                                      "KSD 韓星網", "商周", "自由財經", "鉅亨號",
-                                     "wownews.tw", "utravel.com.hk"]:
+                                     "wownews.tw", "utravel.com.hk", "更生新聞網", "香港電台",
+                                     "citytimes.tw"]:
                             continue
 
                         time_element = article.find(class_="WW6dff uQIVzc Sksgp slhocf")
