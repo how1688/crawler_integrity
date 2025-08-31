@@ -16,7 +16,8 @@ import logging
 from typing import List, Dict, Any, Set, Optional
 from dotenv import load_dotenv
 from tqdm import tqdm
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class DiffKeywordConfig:
     
     # API 設定
     API_CONFIG = {
-        'model_name': 'gemini-2.5-flash-lite',
+        'model_name': 'gemini-2.0-flash-exp',
         'call_delay_seconds': 1,  # API 呼叫間隔
         'max_retries': 3,
     }
@@ -62,7 +63,8 @@ class DiffKeywordProcessor:
 
     def __init__(self):
         """初始化困難關鍵字處理器"""
-        self.model = None
+        self.client = None
+        self.model_name = None
         self.supabase_client = None
         self.api_config = DiffKeywordConfig.API_CONFIG
         self.proc_config = DiffKeywordConfig.PROCESSING_CONFIG
@@ -78,9 +80,9 @@ class DiffKeywordProcessor:
             raise EnvironmentError("錯誤：找不到 GEMINI_API_KEY，請在 .env 檔案中設定")
         
         try:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel(self.api_config['model_name'])
-            logger.info(f"✓ Gemini API ({self.api_config['model_name']}) 初始化成功")
+            self.client = genai.Client(api_key=api_key)
+            self.model_name = self.api_config['model_name']
+            logger.info(f"✓ Gemini API ({self.model_name}) 初始化成功")
         except Exception as e:
             logger.error(f"✗ 初始化 Gemini 時發生錯誤: {e}")
             raise
@@ -105,7 +107,7 @@ class DiffKeywordProcessor:
 
     def is_ready(self) -> bool:
         """檢查模型和資料庫連線是否已成功初始化"""
-        return self.model is not None and self.supabase_client is not None
+        return self.client is not None and self.supabase_client is not None
 
     def _clean_response_text(self, text: str) -> str:
         """清理 Gemini 回覆中的 markdown JSON 標籤"""
@@ -128,14 +130,26 @@ class DiffKeywordProcessor:
         """呼叫 Gemini API 並處理回覆"""
         for attempt in range(self.api_config['max_retries']):
             try:
-                response = self.model.generate_content(prompt)
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=types.Part.from_text(prompt),
+                    config=types.GenerateContentConfig(
+                        temperature=0.3,
+                        max_output_tokens=2048,
+                    )
+                )
+                
+                # 獲取回覆文本
+                response_text = response.text
+                
                 # 使用修正後的清理函式
-                cleaned_text = self._clean_response_text(response.text)
+                cleaned_text = self._clean_response_text(response_text)
                 return json.loads(cleaned_text)
+                
             except json.JSONDecodeError as e:
                 logger.warning(f"✗ JSON 解析錯誤 (嘗試 {attempt + 1}/{self.api_config['max_retries']}): {e}")
                 if attempt == self.api_config['max_retries'] - 1:
-                    logger.error(f"原始回覆: {response.text}")
+                    logger.error(f"原始回覆: {response_text}")
                     return {}
             except Exception as e:
                 logger.warning(f"✗ API 呼叫時發生錯誤 (嘗試 {attempt + 1}/{self.api_config['max_retries']}): {e}")
