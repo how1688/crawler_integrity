@@ -1,5 +1,5 @@
 # 使用官方 playwright image（已經包含 Chromium/Firefox/Webkit）
-FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.55.0-jammy
 
 # 設定工作目錄
 WORKDIR /app
