@@ -1,25 +1,15 @@
-# 使用 Playwright 官方映像
+# 使用官方 playwright image（已經包含 Chromium/Firefox/Webkit）
 FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy
 
 # 設定工作目錄
 WORKDIR /app
 
-# Railway 容器裡建立 /downloads 目錄
-ENV DOWNLOAD_DIR=/downloads
-
-# 安裝 Python
-USER root
-RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
-
-# 複製專案需求
+# 安裝 Python 需求 (如果你有 requirements.txt)
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 複製專案程式碼
+# 複製程式碼
 COPY . .
-
-# 切回 seluser（Selenium 官方映像默認使用）
-USER seluser
 
 # 執行主程式
 CMD ["python3", "schedule_test.py"]
