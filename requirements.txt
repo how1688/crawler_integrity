@@ -25,3 +25,4 @@ schedule>=1.2.0
 python-dotenv>=1.0.0
 
 # UUID / JSON / OS / shutil / random / re 都是 Python 標準庫，不需額外安裝
+playwright
