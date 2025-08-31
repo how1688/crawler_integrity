@@ -1,5 +1,5 @@
-# 使用 Selenium 官方 standalone-chrome 映像
-FROM selenium/standalone-chrome:latest
+# 使用 Playwright 官方映像
+FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy
 
 # 設定工作目錄
 WORKDIR /app
