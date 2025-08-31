@@ -6,12 +6,12 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 scripts = [
-    "test5_play.py", 
-    # "./New_Summary/scripts/quick_run.py",
-        #    "./demo/data_to_supabase/generate_categories_from_single_news.py",
-        #    "./demo/data_to_supabase/generate_picture_to_supabase/generate_from_supabase.py",
-        #    "./Relative_News.py"
-        ]
+    # "test5_play.py", 
+    "./New_Summary/scripts/quick_run.py",
+    "./demo/data_to_supabase/generate_categories_from_single_news.py",
+    "./demo/data_to_supabase/generate_picture_to_supabase/generate_from_supabase.py",
+    "./Relative_News.py"
+]
 
 def run_scripts():
     """執行所有指定的 Python 腳本"""
